@@ -1,3 +1,5 @@
+<img src="blob:https://gemini.google.com/b076adf8-3265-458a-b7b7-fb82be43dcbe" alt=""/><img width="1024" height="572" alt="image" src="https://github.com/user-attachments/assets/13daa8a1-ba92-43af-b6b0-03a8b3287d49" />
+
 # Multi-AI Research Digest Streamlit App
 
 **Single-call structured research pipeline that combines Streamlit, the Google GenAI SDK, and Pydantic v2 to produce schema-validated technical reports through a deterministic JSON contract.**
@@ -170,7 +172,7 @@ multi-ai-research-digest/
 Clone the repository:
 
 ```bash
-git clone https://github.com/<username>/multi-ai-research-digest.git
+git clone https://github.com/Ali-datasmith/multi-ai-research-digest.git
 
 cd multi-ai-research-digest
 ```
@@ -181,49 +183,26 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Configure environment variables:
+Configure local environment variables:
 
 ```bash
 export GOOGLE_API_KEY="your_api_key"
 export GEMINI_MODEL="gemini-3.5-flash"
 ```
 
+### Production Cloud Configuration
+
+When deploying to **Streamlit Community Cloud**, API credentials **must not** be committed to the repository. Configure them through **Advanced Settings → Secrets** using the following TOML format:
+
+```toml
+GOOGLE_API_KEY = "your_api_key_here"
+GEMINI_MODEL = "gemini-3.5-flash"
+```
+
 Run the application:
 
 ```bash
 streamlit run app.py
-```
-
----
-
-# Runtime Flow
-
-```
-User Input
-     │
-     ▼
-Session State Update
-     │
-     ▼
-research_active = True
-     │
-     ▼
-ResearchEngine
-     │
-     ▼
-Gemini API
-     │
-     ▼
-Pydantic Validation
-     │
-     ▼
-model_dump()
-     │
-     ▼
-Session State
-     │
-     ▼
-UI Tabs
 ```
 
 ---
