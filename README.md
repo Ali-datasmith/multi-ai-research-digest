@@ -11,6 +11,10 @@
 
 ---
 
+# Demo Video
+▶ Watch the walkthrough: <https://github.com/user-attachments/assets/5068c281-083c-4cea-a0b0-dd0adce8f3c1>
+---
+
 # Architecture
 
 The application is intentionally designed around a **single inference request**. Rather than chaining multiple prompts together, the model produces a fully structured JSON document that is parsed directly into a Pydantic object before being exposed to the UI.
