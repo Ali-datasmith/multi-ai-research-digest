@@ -94,7 +94,6 @@ for i, example in enumerate(example_queries):
 
 st.text_area(
     "Enter your technical query:",
-    value=st.session_state.raw_query,
     height=100,
     placeholder="e.g. Polars vs DuckDB 2026 memory scaling",
     key="query_input_widget",
