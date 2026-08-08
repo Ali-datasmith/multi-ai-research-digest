@@ -157,7 +157,22 @@ class ResearchEngine:
             self.model_id = os.environ.get("GEMINI_MODEL", DEFAULT_MODEL)
 
         self.enable_grounding = enable_grounding
-        self.client = genai.Client()
+
+        # --- Diagnostic: explicitly surface which API key is in play ---
+        try:
+            import streamlit as st
+            _api_key = st.secrets.get("GOOGLE_API_KEY") or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+        except Exception:
+            _api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+
+        if _api_key:
+            _masked = (_api_key[:8] + "..." + _api_key[-4:]) if len(_api_key) > 12 else "***"
+            logger.info(f"Using API key: {_masked}")
+            self.client = genai.Client(api_key=_api_key)
+        else:
+            logger.warning("No GOOGLE_API_KEY found — SDK will use auto-detect fallback")
+            self.client = genai.Client()
+
         logger.success(f"Research Engine initialized | model={self.model_id} | grounding={self.enable_grounding}")
 
     def _config(self, grounded: bool) -> types.GenerateContentConfig:
