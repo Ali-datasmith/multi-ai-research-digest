@@ -23,8 +23,7 @@ wheels/
 .installed.cfg
 *.egg
 
-# Streamlit & Secrets
-.streamlit/
+# Streamlit (secrets only — config.toml is intentionally committed)
 .streamlit/secrets.toml
 
 # Colab & IDE

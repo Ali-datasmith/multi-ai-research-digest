@@ -7,7 +7,7 @@ Design contract:
   that reject the schema + search combination.
 - Status-code-first error classification (substring heuristics only as a
   documented last resort).
-- Per-run telemetry: latency and grounding sources.
+- Per-run telemetry via loguru: latency and grounding sources.
 
 Python 3.10+.
 """
@@ -21,10 +21,8 @@ from dataclasses import dataclass, field
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
+from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
-from rich.console import Console
-
-console = Console()
 
 DEFAULT_MODEL = "gemini-3.5-flash"
 
@@ -160,7 +158,7 @@ class ResearchEngine:
 
         self.enable_grounding = enable_grounding
         self.client = genai.Client()
-        console.print(f"[bold green]✔[/bold green] Research Engine initialized with model: [cyan]{self.model_id}[/cyan]")
+        logger.success(f"Research Engine initialized | model={self.model_id} | grounding={self.enable_grounding}")
 
     def _config(self, grounded: bool) -> types.GenerateContentConfig:
         kwargs = dict(
@@ -175,7 +173,7 @@ class ResearchEngine:
 
     def execute_research(self, query: str) -> ResearchResult:
         """Execute the single-call pipeline and return a verified result."""
-        console.print(f"[bold blue]⚡[/bold blue] Querying knowledge base for: [yellow]'{query}'[/yellow]")
+        logger.info(f"Query received: '{query}'")
 
         start = time.perf_counter()
         try:
@@ -185,20 +183,25 @@ class ResearchEngine:
         except genai_errors.ClientError as exc:
             # Older models reject schema + search grounding: degrade, never crash.
             if self.enable_grounding and getattr(exc, "code", None) == 400:
-                console.print("[yellow]⚠ Grounding rejected for this model; retrying schema-only.[/yellow]")
+                logger.warning("Grounding rejected for this model; retrying schema-only.")
                 response = self.client.models.generate_content(
                     model=self.model_id, contents=query, config=self._config(False)
                 )
             else:
+                logger.error(f"SDK client error: {exc}")
                 raise
         elapsed = time.perf_counter() - start
 
         if response.parsed is None:
+            logger.error("Model returned an unparsable payload for the ResearchReport schema.")
             raise SchemaValidationError("Model returned an unparsable payload for the ResearchReport schema.")
+
+        sources = _extract_sources(response)
+        logger.success(f"Research complete | latency={elapsed:.2f}s | sources={len(sources)}")
 
         return ResearchResult(
             report=response.parsed.model_dump(),
             model_id=self.model_id,
             elapsed_seconds=round(elapsed, 2),
-            sources=_extract_sources(response),
+            sources=sources,
         )

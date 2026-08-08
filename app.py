@@ -5,6 +5,7 @@ the `research_active` guard (Single-Path Guard Pattern).
 """
 
 import streamlit as st
+from loguru import logger
 
 from research_engine import (
     ResearchEngine,
@@ -61,6 +62,7 @@ if st.session_state.research_active:
 
         except Exception as exc:  # boundary layer: categorize, never crash
             category, detail = classify_error(exc)
+            logger.error(f"{category}: {detail}")
             st.session_state.error_message = f"{category}: {detail}"
             st.session_state.report_data = None
             st.session_state.run_meta = None
@@ -72,28 +74,7 @@ if st.session_state.research_active:
 st.title("Multi-AI Research Digest")
 st.caption("Single-call structured synthesis · schema-validated output · Google GenAI SDK + Pydantic v2")
 
-# --- 4. Sidebar: context + telemetry -------------------------------------------
-with st.sidebar:
-    st.header("Overview")
-    st.caption(
-        "Deterministic pipeline: one inference request per execution, "
-        "Pydantic-locked JSON contract, state-driven rendering."
-    )
-    st.markdown(
-        "[Repository](https://github.com/Ali-datasmith/multi-ai-research-digest) · "
-        "[Live demo](https://multi-ai-research-digest-kjbkjmpx9rtn2etfswvnty.streamlit.app/)"
-    )
-    st.divider()
-    st.subheader("Session telemetry")
-    if st.session_state.run_meta:
-        meta = st.session_state.run_meta
-        st.markdown(f"**Model:** `{meta['model']}`")
-        st.markdown(f"**Latency:** `{meta['latency']}s`")
-        st.markdown(f"**Grounding sources:** `{len(meta['sources'])}`")
-    else:
-        st.caption("No successful execution yet.")
-
-# --- 5. Query input --------------------------------------------------------------
+# --- 4. Query input --------------------------------------------------------------
 st.subheader("Research Query")
 
 example_queries = [
@@ -133,7 +114,7 @@ if st.button("Execute Research", type="primary", disabled=st.session_state.resea
 if st.session_state.error_message:
     st.error(st.session_state.error_message)
 
-# --- 6. State-driven output --------------------------------------------------------
+# --- 5. State-driven output --------------------------------------------------------
 if st.session_state.report_data:
     report = st.session_state.report_data
     st.divider()
