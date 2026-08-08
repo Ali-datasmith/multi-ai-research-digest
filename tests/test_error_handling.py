@@ -1,29 +1,62 @@
+"""Error taxonomy tests: status-code-first classification with typed SDK errors."""
+
 import pytest
+from google.genai import errors as genai_errors
+from pydantic import ValidationError
 
-def categorize_error(err_str: str, err_type: str) -> str:
-    """Replicates the exact error mapping logic from app.py for isolated testing."""
-    if "quota" in err_str.lower() or "429" in err_str:
-        return f"API Quota Exhaustion: {err_str}"
-    elif "timeout" in err_str.lower() or "504" in err_str or "deadline" in err_str.lower():
-        return f"Network Timeout / Server Unavailable: {err_str}"
-    elif "validation" in err_str.lower() or "schema" in err_str.lower() or "pydantic" in err_str.lower():
-        return f"Schema Validation Failure: AI returned malformed JSON. {err_str}"
-    elif "api_key" in err_str.lower() or "auth" in err_str.lower() or "401" in err_str or "403" in err_str:
-        return f"Authentication Error: Invalid or missing GOOGLE_API_KEY. {err_str}"
-    else:
-        return f"Unexpected System Error ({err_type}): {err_str}"
+from research_engine import (
+    CAT_AUTH,
+    CAT_QUOTA,
+    CAT_SCHEMA,
+    CAT_TIMEOUT,
+    CAT_UNEXPECTED,
+    CodeBoilerplate,
+    SchemaValidationError,
+    classify_error,
+)
 
-def test_error_quota():
-    assert categorize_error("Exceeded quota 429", "Exception").startswith("API Quota Exhaustion")
 
-def test_error_timeout():
-    assert categorize_error("Deadline exceeded", "TimeoutError").startswith("Network Timeout")
+@pytest.mark.parametrize(
+    "cls,code,category",
+    [
+        (genai_errors.ClientError, 429, CAT_QUOTA),
+        (genai_errors.ClientError, 401, CAT_AUTH),
+        (genai_errors.ClientError, 403, CAT_AUTH),
+        (genai_errors.ServerError, 503, CAT_TIMEOUT),
+        (genai_errors.ServerError, 504, CAT_TIMEOUT),
+    ],
+)
+def test_status_code_classification(cls, code, category):
+    assert classify_error(cls(code, {"error": {"message": "boom"}}))[0] == category
 
-def test_error_validation():
-    assert categorize_error("Pydantic schema validation failed", "ValidationError").startswith("Schema Validation Failure")
 
-def test_error_auth():
-    assert categorize_error("Invalid API_KEY provided", "AuthError").startswith("Authentication Error")
+def test_timeout_type():
+    assert classify_error(TimeoutError("deadline"))[0] == CAT_TIMEOUT
 
-def test_error_unknown():
-    assert categorize_error("Unknown bug", "RuntimeError").startswith("Unexpected System Error")
+
+def test_connection_type():
+    assert classify_error(ConnectionError("reset"))[0] == CAT_TIMEOUT
+
+
+def test_pydantic_validation():
+    with pytest.raises(ValidationError) as err:
+        CodeBoilerplate(snippet="x", explanation="y")
+    assert classify_error(err.value)[0] == CAT_SCHEMA
+
+
+def test_schema_validation_error():
+    assert classify_error(SchemaValidationError("bad payload"))[0] == CAT_SCHEMA
+
+
+def test_substring_fallback_quota():
+    assert classify_error(ValueError("Exceeded quota 429"))[0] == CAT_QUOTA
+
+
+def test_substring_fallback_auth():
+    assert classify_error(ValueError("invalid api_key"))[0] == CAT_AUTH
+
+
+def test_unexpected_fallback():
+    category, detail = classify_error(RuntimeError("boom"))
+    assert category == CAT_UNEXPECTED
+    assert "RuntimeError" in detail
