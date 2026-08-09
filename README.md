@@ -12,7 +12,7 @@
 ---
 
 # Demo Video
-▶ Watch the walkthrough: <https://github.com/user-attachments/assets/5068c281-083c-4cea-a0b0-dd0adce8f3c1>
+<video src="https://github.com/user-attachments/assets/93090585-8d08-4b21-839f-5ecdc7d39378" controls width="100%"></video>
 ---
 
 # Architecture
