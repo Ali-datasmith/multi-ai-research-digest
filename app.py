@@ -29,6 +29,54 @@ if "run_meta" not in st.session_state:
 
 st.set_page_config(page_title="Multi-AI Research Digest", layout="wide")
 
+# --- Theme injection V1 (presentational only — zero impact on execution path) ---
+st.markdown(
+    """
+<style>
+/* Base canvas: deep charcoal */
+.stApp { background-color: #0B0F19; }
+
+/* Typography: pure white headers, muted silver body */
+h1, h2, h3, h4 { color: #FFFFFF !important; letter-spacing: -0.01em; }
+.stMarkdown p, .stMarkdown li, label, div[data-testid="stCaptionContainer"] { color: #8E8E93; }
+div[data-testid="stAlert"] p, div[data-testid="stAlert"] li { color: inherit !important; }
+
+/* Glassmorphic surfaces: 3% white + 12px blur + 1px crisp border, no heavy shadows */
+div[data-testid="stExpander"] details,
+div[data-testid="stMetric"],
+div[data-testid="stCodeBlock"],
+div[data-testid="stTextArea"] > div > div,
+div[data-testid="stSidebarContent"] {
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    box-shadow: none !important;
+}
+
+/* Electric cyan accent — sparingly: primary action, key metrics, active tab, links */
+button[data-testid="stBaseButton-primary"] {
+    background: #00E5FF !important;
+    color: #0B0F19 !important;
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    font-weight: 600;
+}
+div[data-testid="stMetricValue"] { color: #00E5FF !important; }
+div[data-testid="stTabs"] button[aria-selected="true"] {
+    color: #00E5FF !important;
+    border-bottom: 2px solid #00E5FF !important;
+}
+a { color: #00E5FF; }
+
+/* Hairline dividers instead of shadows */
+hr { border-color: rgba(255, 255, 255, 0.08) !important; }
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+
 
 @st.cache_resource
 def get_engine() -> ResearchEngine:

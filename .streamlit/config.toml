@@ -1,24 +1,11 @@
-# Multi-AI Research Digest — UI theme (60/30/10 rule)
-# 60% background: deep dark slate | 30% surfaces: grey-blue | 10% accent: electric purple
-
+# Modern Dark Minimalist — Linear/Vercel grade
 [theme]
 base = "dark"
-primaryColor = "#8B5CF6"
-backgroundColor = "#0F172A"
-secondaryBackgroundColor = "#1E293B"
-textColor = "#E2E8F0"
+primaryColor = "#00E5FF"
+backgroundColor = "#0B0F19"
+secondaryBackgroundColor = "#121620"
+textColor = "#FFFFFF"
 font = "sans serif"
-
-# Alternative accent (neon teal) — swap primaryColor if preferred:
-# primaryColor = "#06B6D4"
-
-# Light-mode variant:
-# [theme]
-# base = "light"
-# primaryColor = "#7C3AED"
-# backgroundColor = "#F8FAFC"
-# secondaryBackgroundColor = "#E2E8F0"
-# textColor = "#0F172A"
 
 [server]
 headless = true
