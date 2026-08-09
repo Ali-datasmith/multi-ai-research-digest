@@ -4,7 +4,6 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from google.genai import errors as genai_errors
 from pydantic import ValidationError
 
 from research_engine import (
@@ -104,19 +103,17 @@ def test_execute_returns_verified_result(mock_client):
     mock_client.models.generate_content.assert_called_once()
 
 
+def test_single_call_no_grounding_tools(mock_client):
+    """The request shape must match the proven baseline: one call, no tools."""
+    mock_client.models.generate_content.return_value = _mock_response()
+    ResearchEngine().execute_research("q")
+
+    assert mock_client.models.generate_content.call_count == 1
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert not config.tools
+
+
 def test_execute_parse_failure_raises_schema_error(mock_client):
     mock_client.models.generate_content.return_value.parsed = None
     with pytest.raises(SchemaValidationError):
         ResearchEngine().execute_research("q")
-
-
-def test_grounding_degrades_on_400(mock_client):
-    rejection = genai_errors.ClientError(
-        400, {"error": {"message": "Tool google_search is not supported with response_schema"}}
-    )
-    mock_client.models.generate_content.side_effect = [rejection, _mock_response()]
-
-    result = ResearchEngine().execute_research("q")
-
-    assert mock_client.models.generate_content.call_count == 2
-    assert isinstance(result.report, dict)

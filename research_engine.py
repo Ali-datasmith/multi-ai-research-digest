@@ -1,13 +1,14 @@
 """Multi-AI Research Digest — core synthesis engine.
 
-Design contract:
+Design contract (restored to the proven baseline request shape):
 - Exactly one inference request per research execution.
 - Schema-locked JSON output via native Pydantic parsing (google-genai SDK).
-- Optional Google Search grounding with graceful degradation on models
-  that reject the schema + search combination.
+- NO Google Search grounding. Grounding draws from a separate, tightly capped
+  free-tier quota pool and was the root cause of persistent RESOURCE_EXHAUSTED
+  errors on fresh API keys while baseline-shaped calls succeeded.
 - Status-code-first error classification (substring heuristics only as a
   documented last resort).
-- Per-run telemetry via loguru: latency and grounding sources.
+- Per-run telemetry via loguru.
 
 Python 3.10+.
 """
@@ -19,7 +20,6 @@ import time
 from dataclasses import dataclass, field
 
 from google import genai
-from google.genai import errors as genai_errors
 from google.genai import types
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
@@ -146,24 +146,17 @@ SYSTEM_PROMPT = (
 
 
 class ResearchEngine:
-    """Single-call structured synthesis client."""
+    """Single-call structured synthesis client (baseline request shape)."""
 
-    def __init__(self, enable_grounding: bool = True):
+    def __init__(self):
         try:
             import streamlit as st
 
             self.model_id = st.secrets.get("GEMINI_MODEL", os.environ.get("GEMINI_MODEL", DEFAULT_MODEL))
+            _api_key = st.secrets.get("GOOGLE_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         except Exception:
             self.model_id = os.environ.get("GEMINI_MODEL", DEFAULT_MODEL)
-
-        self.enable_grounding = enable_grounding
-
-        # --- Diagnostic: explicitly surface which API key is in play ---
-        try:
-            import streamlit as st
-            _api_key = st.secrets.get("GOOGLE_API_KEY") or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-        except Exception:
-            _api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+            _api_key = os.environ.get("GOOGLE_API_KEY")
 
         if _api_key:
             _masked = (_api_key[:8] + "..." + _api_key[-4:]) if len(_api_key) > 12 else "***"
@@ -173,38 +166,25 @@ class ResearchEngine:
             logger.warning("No GOOGLE_API_KEY found — SDK will use auto-detect fallback")
             self.client = genai.Client()
 
-        logger.success(f"Research Engine initialized | model={self.model_id} | grounding={self.enable_grounding}")
+        logger.success(f"Research Engine initialized | model={self.model_id}")
 
-    def _config(self, grounded: bool) -> types.GenerateContentConfig:
-        kwargs = dict(
+    def _config(self) -> types.GenerateContentConfig:
+        # Identical to the proven working baseline: schema-locked, no tools.
+        return types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
             response_mime_type="application/json",
             response_schema=ResearchReport,
             temperature=0.2,
         )
-        if grounded:
-            kwargs["tools"] = [types.Tool(google_search=types.GoogleSearch())]
-        return types.GenerateContentConfig(**kwargs)
 
     def execute_research(self, query: str) -> ResearchResult:
         """Execute the single-call pipeline and return a verified result."""
         logger.info(f"Query received: '{query}'")
 
         start = time.perf_counter()
-        try:
-            response = self.client.models.generate_content(
-                model=self.model_id, contents=query, config=self._config(self.enable_grounding)
-            )
-        except genai_errors.ClientError as exc:
-            # Older models reject schema + search grounding: degrade, never crash.
-            if self.enable_grounding and getattr(exc, "code", None) == 400:
-                logger.warning("Grounding rejected for this model; retrying schema-only.")
-                response = self.client.models.generate_content(
-                    model=self.model_id, contents=query, config=self._config(False)
-                )
-            else:
-                logger.error(f"SDK client error: {exc}")
-                raise
+        response = self.client.models.generate_content(
+            model=self.model_id, contents=query, config=self._config()
+        )
         elapsed = time.perf_counter() - start
 
         if response.parsed is None:
